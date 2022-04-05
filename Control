@@ -4,11 +4,11 @@
 #include <Servo.h>
 
 
-#define MIN_PULSE_WIDTH 1100
-#define ZERO_PULSE_WIDTH 1500
-#define MAX_PULSE_WIDTH_T100 1794
-#define MAX_PULSE_WIDTH_T200 1836
-#define FREQUENCY 50
+int minPulse = 1100;
+int zeroPulse = 1500;
+int maxPulseT100 = 1794;
+int maxPulseT200 = 1836;
+
 
 byte motorPin[] = {8, 9, 10, 11, 12, 13};
 Servo fr;
@@ -17,37 +17,18 @@ Servo br;
 Servo bl;
 Servo vr;
 Servo vl;
+Servo motors[] = {fr, fl, br, bl, vr, vl};
 
 //Define input pins and corresponding value storage
-int leftX = A0;
-int leftY = A1;
-int rightX = A2;
-int rightY = A3;
-// int middleX = A4;
-// int middleY = A5;
-int lButton = 2;
-int rButton = 3;
+int leftX = A0, leftY = A1, rightX = A2, rightY = A3, lButton = 2, rButton = 3;
 
-int lx;
-int ly;
-int rx;
-int ry;
-// int mx;
-// int my;
-int lButtonState;
-int rButtonState;
+int lx, ly, rx, ry, lButtonState, rButtonState;
 
-int rcenx;
-int rceny;
-int lcenx;
-int lceny;
-// int mcenx;
-// int mceny;
+int rcenx, rceny, lcenx, lceny;
 
 //initialize arrays for storing motor thrust info
 double thrust[6];
 int pulse[6];
-int pulseWidth[6];
 
 //components used to calculate the thrust for each motor
 double dir;
@@ -58,24 +39,13 @@ double yawComp[4];
 double vertComp[2];
 double rollComp[2];
 
-//assigns motor slots on the PCA9685 board
-int slots[] = {0, 1, 2, 3, 4, 5};
-
 void setup() {
   Serial.begin(9600);
-  fr.attach(motorPin[0]);
-  bl.attach(motorPin[1]);
-  fl.attach(motorPin[2]);
-  br.attach(motorPin[3]);
-  vl.attach(motorPin[4]);
-  vr.attach(motorPin[5]);
-  fr.writeMicroseconds(1500);
-  bl.writeMicroseconds(1500);
-  fl.writeMicroseconds(1500);
-  br.writeMicroseconds(1500);
-  vl.writeMicroseconds(1500);
-  vr.writeMicroseconds(1500);
-	setCen();
+  for(int m = 0; m < 6; m++){
+    motors[m].attach(motorPin[m]);
+    motors[m].writeMicroseconds(1500);
+  }
+  setCen();
   pinMode(leftX, INPUT);
   pinMode(leftY, INPUT);
   pinMode(rightX, INPUT);
@@ -86,8 +56,6 @@ void setup() {
   Serial.println("lceny: " + (String)lceny);
   Serial.println("rcenx: " + (String)rcenx);
   Serial.println("rceny: " + (String)rceny);
-//  Serial.println("mcenx: " + (String)mcenx);
-//  Serial.println("mceny: " + (String)mceny);
   Serial.println();
   
 }
@@ -98,8 +66,6 @@ void loop() {
   Serial.println("ly: " + (String)ly);
   Serial.println("rx: " + (String)rx);
   Serial.println("ry: " + (String)ry);
-//  Serial.println("mx: " + (String)mx);
-//  Serial.println("my: " + (String)my);
   Serial.println();
   moveROV();
   Serial.println("Direction: " + (String)(dir*180/PI));
@@ -144,8 +110,6 @@ void getIn(){
   ly = 1023 - analogRead(leftY);
   rx = analogRead(rightX);
   ry = 1023 - analogRead(rightY);
-//  mx = analogRead(middleX);
-//  my = 1023 - analogRead(middleY);
   lButtonState = digitalRead(lButton);
   rButtonState = digitalRead(rButton);
 }
@@ -155,8 +119,6 @@ void setCen(){
   rceny = 1023 - analogRead(rightY);
   lcenx = analogRead(leftX);
   lceny = 1023 - analogRead(leftY);
-//  mcenx = analogRead(middleX);
-//  mceny = 1023 - analogRead(middleY);
 }
 
 void calcDir(){
@@ -241,18 +203,15 @@ void updateThrust(){
 void updatePulse(){
   for(int i = 0; i < 6; i++){
     if(i < 4){
-      pulse[i] = (int)mapWithC(thrust[i], -1, 0, 1, MIN_PULSE_WIDTH, ZERO_PULSE_WIDTH, MAX_PULSE_WIDTH_T100);
+      pulse[i] = (int)mapWithC(thrust[i], -1, 0, 1, minPulse, zeroPulse, maxPulseT100);
     }else{
-      pulse[i] = (int)mapWithC(thrust[i], -1, 0, 1, MIN_PULSE_WIDTH, ZERO_PULSE_WIDTH, MAX_PULSE_WIDTH_T200);
+      pulse[i] = (int)mapWithC(thrust[i], -1, 0, 1, minPulse, zeroPulse, maxPulseT200);
     }
   }
 }
 
 void motorControl(){
-  fr.writeMicroseconds(pulse[0]);
-  bl.writeMicroseconds(pulse[1]);
-  fl.writeMicroseconds(pulse[2]);
-  br.writeMicroseconds(pulse[3]);
-  vl.writeMicroseconds(pulse[4]);
-  vr.writeMicroseconds(pulse[5]);
+  for(int i = 0; i < 6; i++){
+    motors[i].writeMicroseconds(pulse[i]);
+  }
 }
